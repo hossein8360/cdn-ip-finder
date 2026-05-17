@@ -1,10 +1,12 @@
-# 🌐 CDN IP Finder for ShirOKhorshid
+# 🌐 CDN IP Scanner for ShirOKhorshid
 
 <div align="center">
 
+![Version](https://img.shields.io/badge/version-2.0-brightgreen)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
-![Shell](https://img.shields.io/badge/language-Bash-green)
+![Language](https://img.shields.io/badge/tools-Bash%20%2B%20HTML-orange)
 ![Iran](https://img.shields.io/badge/tested%20from-Iran-red)
+![Serverless](https://img.shields.io/badge/web%20app-serverless-9b5cff)
 
 **[English](#english) | [فارسی](#فارسی)**
 
@@ -16,184 +18,264 @@
 
 ### What is This?
 
-This project provides bash scripts to automatically find, collect and test CDN edge IPs (Akamai, Google, Amazon CloudFront, Microsoft Azure) that are **not blocked in Iran**, so they can be used for **CDN Fronting** in [ShirOKhorshid](https://github.com/shirokhorshid/shirokhorshid-android) — a community fork of the Psiphon Android client.
+A set of tools to **find, test, and export CDN edge IPs** that are not blocked in Iran, for use in the **CDN Fronting** feature of [ShirOKhorshid](https://github.com/shirokhorshid/shirokhorshid-android) — a community fork of the Psiphon Android client.
+
+Supports: **Akamai · Google CDN · Amazon CloudFront · Microsoft Azure CDN**
 
 ---
 
-### How CDN Fronting Works
+## 🖥️ `index.html` — Web Scanner (Main Tool)
+
+> The most important file in this project.
+> **Open it directly in your browser inside Iran — no installation needed.**
+
+`index.html` is a fully **serverless, single-file web application** that scans CDN IPs directly from your browser. Because the test runs inside your own browser, the results are **100% accurate for your specific ISP and network** — no proxy, no middleman.
+
+### How to Use
+
+**Option A — GitHub Pages (recommended):**
+```
+https://YOUR_USERNAME.github.io/cdn-ip-finder/
+```
+Open this URL inside Iran without VPN for accurate results.
+
+**Option B — Local file:**
+```bash
+# Just download index.html and open it
+open index.html       # Mac
+xdg-open index.html   # Linux
+# Or double-click the file on Windows
+```
+
+No server, no npm, no installation. Pure HTML + JS.
+
+---
+
+### `index.html` Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔍 **Direct browser scan** | Tests each IP with `fetch()` in `no-cors` mode — fast TCP check from your device |
+| 🇮🇷 **ISP auto-detection** | Detects your operator (MCI / Irancell / Rightel / Shatel) via ipapi.co |
+| ⭐ **ISP profile** | Shows pre-tested IPs known to work on your specific operator |
+| ⚡ **Scan presets** | Quick (50 IPs) · Standard (250) · Deep (1000) · Recheck alive IPs |
+| 🏢 **CDN selector** | Choose Akamai, Google, Amazon, Azure — or all at once |
+| 🔒 **SNI selector** | Pick the right SNI hostname per CDN with one click |
+| 📋 **Range chips** | Click IP ranges to add them — CIDR, range, or single IP supported |
+| 📊 **Live dashboard** | Latency distribution chart + CDN health bars (loads Chart.js lazily) |
+| 🕐 **Scan history** | Auto-saves last 20 scans to `localStorage` — no server needed |
+| ⭐ **Stable IP detection** | Highlights IPs that appeared alive in multiple scans |
+| 📋 **Copy for ShirOKhorshid** | One-click comma-separated output ready to paste |
+| 📱 **QR code** | Instant transfer of working IPs to your phone |
+| 💾 **Export** | Download results as TXT or CSV |
+| ♻️ **Stability score** | Tests each IP multiple times to detect flaky connections |
+
+---
+
+### How the Browser Test Works
 
 ```
-[User in Iran]
-      ↓  connects to Google/Akamai IP (not blocked)
-[CDN Edge IP]
-      ↓  CDN forwards traffic internally
-[Psiphon Server]
-      ↓
-[Free Internet 🌍]
+Iranian user opens index.html in browser
+        ↓
+Browser sends HEAD request to each CDN IP:
+  fetch(`https://${ip}/`, { mode: 'no-cors' })
+        ↓
+Fast response (< 85% of timeout)
+  → TCP connected → IP is REACHABLE on your ISP ✅
+Slow / no response (≥ 85% of timeout)
+  → Connection timed out → IP is BLOCKED on your ISP ❌
 ```
 
-Iran's firewall **cannot block** major CDN IPs like Akamai or Google without also breaking thousands of legitimate Iranian websites and services. CDN Fronting exploits this by hiding Psiphon traffic behind these unblockable IPs.
-
-The trick is:
-- **SNI** (what the firewall sees): a safe CDN domain like `a248.e.akamai.net`
-- **Host header** (encrypted, what CDN sees): the actual Psiphon server
-- The CDN forwards the request internally to Psiphon
+Even a TLS or CORS error counts as reachable — it means the IP responded.
 
 ---
 
-### Supported CDNs
+### Tabs in `index.html`
 
-| CDN | Status | Why Hard to Block |
-|-----|--------|-------------------|
-| **Akamai** | ✅ Usually works | Powers 30%+ of global internet |
-| **Google** | ✅ Usually works | Gmail, Search — blocking = chaos |
-| **Amazon CloudFront** | ⚠️ Sometimes works | AWS powers half the internet |
-| **Microsoft Azure** | ⚠️ Sometimes works | Office365, Teams widely used in Iran |
+| Tab | What It Does |
+|-----|-------------|
+| 🔍 **اسکنر** | Main scanner — CDN select, IP ranges, settings, results table |
+| 📊 **داشبورد** | Latency chart + CDN health bars after scan |
+| 🕐 **تاریخچه** | Scan history from localStorage + stable IP suggestions |
+| 📱 **راهنما** | Step-by-step guide for using results in ShirOKhorshid |
+| ℹ️ **درباره** | Explanation of how CDN Fronting works |
 
 ---
 
-### Scripts
+### SNI Hostnames Available in `index.html`
 
-#### 1. `scripts/akamai_finder.sh` — Quick Akamai IP Finder
-Resolves 20+ major Akamai-hosted domains and tests IPs from **your own machine**.
+| CDN | SNI Options |
+|-----|------------|
+| ⚡ Akamai | `a248.e.akamai.net` · `a77.net.akamai.net` · `ds-aksb.akamaized.net` |
+| 🔵 Google | `fonts.googleapis.com` · `ajax.googleapis.com` · `storage.googleapis.com` |
+| 🟠 Amazon | `d1.cloudfront.net` · `d2.cloudfront.net` · `aws.cloudfront.net` |
+| 🔷 Azure | `ajax.aspnetcdn.com` · `az416426.vo.msecnd.net` · `cdn.office.net` |
 
-- ✅ Fast (~2 minutes)
-- ✅ Good for a quick initial list
-- ❌ Does NOT verify from inside Iran
+---
+
+### IP Ranges Included in `index.html`
+
+| CDN | Ranges | Coverage |
+|-----|--------|----------|
+| Akamai | 26 ranges (/24) | EU, US, Global |
+| Google | 12 ranges (/24) | Cloud Run, Core |
+| Amazon | 10 ranges (/24) | US, Global |
+| Azure | 7 ranges (/24) | US, Global |
+
+---
+
+### Technical Details
+
+- **No external dependencies** at load time — Chart.js loads lazily only when Dashboard tab is opened
+- **QR code** generated via `api.qrserver.com` (free, no API key)
+- **History** stored in browser `localStorage` — private, never sent anywhere
+- **ISP detection** via `ipapi.co/json/` — only used to show your operator name
+- Works as a **static file** — can be served from GitHub Pages, any web host, or opened locally
+
+---
+
+## 🖥️ Bash Scripts (Server-side Testing)
+
+For testing via real Iranian network nodes, run these on a Linux server **outside Iran**.
+
+#### `scripts/akamai_finder.sh` — Quick Akamai IP Finder
+
+Resolves 20+ major Akamai-hosted domains and tests IPs from your machine.
 
 ```bash
 chmod +x scripts/akamai_finder.sh
 ./scripts/akamai_finder.sh
 ```
 
+- ✅ Fast (~2 minutes)
+- ✅ Good for a quick initial list
+- ❌ Tests from your machine, not from inside Iran
+
 ---
 
-#### 2. `scripts/akamai_iran_checker.sh` — Akamai Iran Tester
-Tests Akamai IPs specifically from **real Iranian nodes** via check-host.net API.
+#### `scripts/akamai_iran_checker.sh` — Akamai Iran Tester
 
-- ✅ Accurate — tested from inside Iran
-- ✅ Shows which Iranian nodes can reach each IP
-- ❌ Slower (~10-15 minutes for full list)
+Tests Akamai IPs from real Iranian nodes via check-host.net API.
 
 ```bash
 chmod +x scripts/akamai_iran_checker.sh
 ./scripts/akamai_iran_checker.sh
 ```
 
+- ✅ Uses ir1, ir2, ir3, ir4 Iranian nodes (Tehran, Isfahan, Mashhad)
+- ✅ More accurate for Iran
+- ❌ Slower (~10–15 min)
+
 ---
 
-#### 3. `scripts/cdn_iran_checker.sh` — Full CDN Iran Checker ⭐ Recommended
-Tests **all major CDNs** from Iranian nodes. The most complete tool.
+#### `scripts/cdn_iran_checker.sh` — Full CDN Iran Checker ⭐
 
-- ✅ Tests Akamai, Google, Amazon AND Azure
-- ✅ First checks which CDNs are accessible in Iran
-- ✅ Collects IPs only from accessible CDNs
-- ✅ Tests each IP from 4 Iranian nodes (Tehran, Isfahan, Mashhad)
-- ✅ Shows response time per Iranian node
-- ✅ Outputs ready-to-paste comma-separated list
-- ❌ Takes 15-30 minutes for full run
+Tests all CDNs from Iranian nodes. Most comprehensive tool.
 
 ```bash
 chmod +x scripts/cdn_iran_checker.sh
 ./scripts/cdn_iran_checker.sh
 ```
 
+- ✅ Tests Akamai, Google, Amazon, Azure
+- ✅ First checks which CDNs are accessible in Iran
+- ✅ Tests each IP from 4 Iranian nodes
+- ✅ Outputs comma-separated list ready for ShirOKhorshid
+- ❌ Takes 15–30 minutes
+
 ---
 
-### How Testing Works (check-host.net)
+## How to Use Results in ShirOKhorshid
+
+1. Run the web scanner (`index.html`) or a bash script
+2. Copy the comma-separated IP list
+3. Open **ShirOKhorshid** → Settings → CDN Fronting
+4. Tap **CDN edge IPs** → paste the list
+5. Tap **CDN SNI hostname** → enter one of:
 
 ```
-Your Machine (outside Iran)
-      ↓ sends API request
-check-host.net
-      ↓ forwards TCP test to Iranian servers
-┌──────────────────────────────────────┐
-│ ir1.node.check-host.net  → Tehran   │
-│ ir2.node.check-host.net  → Tehran   │
-│ ir3.node.check-host.net  → Isfahan  │
-│ ir4.node.check-host.net  → Mashhad  │
-└──────────────────────────────────────┘
-      ↓ each node tries TCP:443 to the IP
-      ↓ reports back: time or error
-✅ IP works in Iran  OR  ❌ IP is blocked
+Akamai  →  a248.e.akamai.net
+Google  →  fonts.googleapis.com
+Amazon  →  d1.cloudfront.net
+Azure   →  ajax.aspnetcdn.com
 ```
 
-> **Note:** check-host.net Iranian nodes cover major cities and ISPs but not all of them. For complete coverage across MCI, Irancell and Rightel, community testing from inside Iran is also valuable — see [Contributing](#contributing).
+6. Set **Connection Protocol** → **CDN Fronting** → Connect! 🎉
 
 ---
 
-### How to Use Results in ShirOKhorshid
+## How CDN Fronting Works
 
-1. Run `cdn_iran_checker.sh` and wait for it to finish
-2. Copy the comma-separated IP list from output (or from `results/cdn_working_ips.txt`)
-3. Open **ShirOKhorshid** on your Android device
-4. Go to **Settings**
-5. Under the **CDN Fronting** section:
-   - Tap **CDN edge IPs** → paste your IP list
-   - Tap **CDN SNI hostname** → enter one of:
-     ```
-     a248.e.akamai.net       ← for Akamai IPs
-     www.googleapis.com      ← for Google IPs
-     ajax.aspnetcdn.com      ← for Azure IPs
-     ```
-6. Set **Connection Protocol** → **CDN Fronting**
-7. Hit connect!
+```
+[User in Iran]
+      ↓  connects to CDN IP (not blocked)
+[CDN Edge IP]  ← firewall sees safe SNI, allows it
+      ↓  CDN forwards traffic internally (Host header is encrypted)
+[Psiphon Server]
+      ↓
+[Free Internet 🌍]
+```
+
+Iran's firewall cannot block Akamai or Google without also breaking
+thousands of Iranian banking, news, and government websites.
 
 ---
 
-### Requirements
+## Project Structure
 
+```
+cdn-ip-finder/
+├── index.html                    # ⭐ Web scanner — open in browser
+├── scripts/
+│   ├── akamai_finder.sh          # Quick Akamai IP finder
+│   ├── akamai_iran_checker.sh    # Akamai tester via Iranian nodes
+│   └── cdn_iran_checker.sh       # Full CDN checker ⭐
+├── docs/
+│   └── how-it-works.md           # Technical explanation
+├── results/
+│   └── .gitkeep                  # Save your results here
+├── README.md
+└── LICENSE
+```
+
+---
+
+## Requirements
+
+**For `index.html`:** just a browser — no installation needed.
+
+**For bash scripts:**
 ```bash
 # Ubuntu / Debian
 sudo apt install curl dnsutils python3 -y
 
-# CentOS / RHEL / Fedora
+# CentOS / RHEL
 sudo yum install curl bind-utils python3 -y
 ```
 
 ---
 
-### Project Structure
+## Contributing
 
-```
-cdn-ip-finder/
-├── scripts/
-│   ├── akamai_finder.sh         # Quick Akamai IP finder (local test)
-│   ├── akamai_iran_checker.sh   # Akamai tester via Iranian nodes
-│   └── cdn_iran_checker.sh      # Full CDN checker via Iranian nodes ⭐
-├── results/
-│   └── .gitkeep                 # Working IPs get saved here
-├── docs/
-│   └── how-it-works.md          # Technical deep dive
-├── README.md                    # This file
-└── LICENSE                      # GPL-3.0
-```
+If you have tested IPs from inside Iran, open an Issue and share:
 
----
-
-### Contributing
-
-If you have tested IPs from inside Iran on specific ISPs, please open an Issue with:
-
-- Which **ISP** you tested on (MCI / Irancell / Rightel / Shatel / etc)
-- Which **IPs** worked and which didn't
+- Which **ISP** (MCI / Irancell / Rightel / Shatel / other)
+- Which **IPs** worked
 - **Date** of testing (IPs rotate frequently!)
-- Your **city** (blocking can differ by region)
-
-Community data from real Iranian users is the most valuable contribution!
+- Your **city** (filtering can differ by region)
 
 ---
 
-### Related Projects
+## Related Projects
 
 - [ShirOKhorshid Android](https://github.com/shirokhorshid/shirokhorshid-android)
 - [Psiphon](https://psiphon.ca)
 
 ---
 
-### License
+## License
 
-GPL-3.0 — same license as ShirOKhorshid and Psiphon
+GPL-3.0 — same as ShirOKhorshid and Psiphon
 
 ---
 ---
@@ -202,82 +284,102 @@ GPL-3.0 — same license as ShirOKhorshid and Psiphon
 
 ### این پروژه چیست؟
 
-این پروژه اسکریپت‌های bash برای پیدا کردن و تست کردن آی‌پی‌های CDN (آکامای، گوگل، آمازون CloudFront، مایکروسافت Azure) ارائه می‌دهد که در ایران **فیلتر نشده‌اند** تا بتوان از آن‌ها برای **CDN Fronting** در اپلیکیشن [شیروخورشید](https://github.com/shirokhorshid/shirokhorshid-android) استفاده کرد.
+مجموعه‌ای از ابزارها برای **پیدا کردن، تست و خروجی گرفتن از آی‌پی‌های CDN** که در ایران فیلتر نشده‌اند، جهت استفاده در قابلیت **CDN Fronting** اپلیکیشن [شیروخورشید](https://github.com/shirokhorshid/shirokhorshid-android).
+
+پشتیبانی از: **Akamai · Google CDN · Amazon CloudFront · Microsoft Azure CDN**
 
 ---
 
-### CDN Fronting چطور کار می‌کند؟
+## 🖥️ فایل `index.html` — اسکنر وب (ابزار اصلی)
 
+> مهم‌ترین فایل این پروژه.
+> **مستقیماً در مرورگر خود داخل ایران باز کنید — نیازی به نصب ندارد.**
+
+`index.html` یک **وب‌اپلیکیشن تک‌فایلی و بدون سرور** است که آی‌پی‌های CDN را مستقیماً از مرورگر شما اسکن می‌کند. چون تست داخل مرورگر خود شما اجرا می‌شود، نتایج **دقیقاً بر اساس اپراتور و شبکه شما** است — بدون پروکسی، بدون واسطه.
+
+### نحوه استفاده
+
+**روش الف — GitHub Pages (توصیه‌شده):**
 ```
-[کاربر در ایران]
-      ↓  به آی‌پی گوگل/آکامای وصل می‌شود (فیلتر نیست)
-[آی‌پی CDN]
-      ↓  CDN ترافیک را داخلاً فوروارد می‌کند
-[سرور سایفون]
-      ↓
-[اینترنت آزاد 🌍]
+https://YOUR_USERNAME.github.io/cdn-ip-finder/
+```
+این لینک را از داخل ایران و بدون VPN باز کنید تا نتایج دقیق باشد.
+
+**روش ب — فایل محلی:**
+```bash
+# فقط index.html را دانلود کنید و باز کنید
+open index.html       # Mac
+xdg-open index.html   # Linux
+# یا روی ویندوز دابل‌کلیک کنید
 ```
 
-فایروال ایران **نمی‌تواند** آی‌پی‌های CDN‌های بزرگ مثل Akamai یا Google را بلاک کند چون بلاک کردن آن‌ها هزاران سایت و سرویس مشروع ایرانی را هم از دسترس خارج می‌کند.
-
-ترفند اینجاست:
-- **SNI** (چیزی که فایروال می‌بیند): یک دامنه CDN بی‌خطر مثل `a248.e.akamai.net`
-- **Host header** (رمزگذاری‌شده، چیزی که CDN می‌بیند): سرور واقعی سایفون
-- CDN درخواست را داخلاً به سایفون فوروارد می‌کند
+بدون سرور، بدون npm، بدون نصب. فقط HTML + JS خالص.
 
 ---
 
-### CDN‌های پشتیبانی‌شده
+### امکانات `index.html`
 
-| CDN | وضعیت | چرا بلاک کردن سخت است |
-|-----|--------|----------------------|
-| **Akamai** | ✅ معمولاً کار می‌کند | بیش از ۳۰٪ اینترنت جهانی را پشتیبانی می‌کند |
-| **Google** | ✅ معمولاً کار می‌کند | Gmail، Search — بلاک کردن = فاجعه |
-| **Amazon CloudFront** | ⚠️ گاهی کار می‌کند | AWS نیمی از اینترنت را پشتیبانی می‌کند |
-| **Microsoft Azure** | ⚠️ گاهی کار می‌کند | Office365 و Teams در ایران زیاد استفاده می‌شود |
+| امکان | توضیح |
+|-------|-------|
+| 🔍 **اسکن مستقیم از مرورگر** | هر آی‌پی را با `fetch()` در حالت `no-cors` تست می‌کند |
+| 🇮🇷 **شناسایی اپراتور** | اپراتور شما را تشخیص می‌دهد (همراه اول / ایرانسل / رایتل / شاتل) |
+| ⭐ **پروفایل اپراتور** | آی‌پی‌های تأییدشده برای اپراتور شما را نشان می‌دهد |
+| ⚡ **پریست‌های اسکن** | سریع (۵۰) · استاندارد (۲۵۰) · عمیق (۱۰۰۰) · بررسی مجدد |
+| 🏢 **انتخاب CDN** | Akamai، Google، Amazon، Azure — یا همه با هم |
+| 🔒 **انتخاب SNI** | انتخاب SNI Hostname مناسب با یک کلیک |
+| 📋 **چیپ‌های رنج IP** | کلیک روی رنج‌ها برای افزودن — CIDR، بازه یا IP تکی |
+| 📊 **داشبورد زنده** | نمودار تأخیر + نوارهای سلامت CDN |
+| 🕐 **تاریخچه اسکن** | ذخیره خودکار ۲۰ اسکن آخر در `localStorage` |
+| ⭐ **تشخیص آی‌پی پایدار** | آی‌پی‌هایی که در چندین اسکن زنده بودند را برجسته می‌کند |
+| 📋 **کپی برای شیروخورشید** | خروجی comma-separated آماده paste |
+| 📱 **QR کد** | انتقال فوری آی‌پی‌های زنده به گوشی |
+| 💾 **خروجی** | دانلود نتایج به فرمت TXT یا CSV |
+| ♻️ **امتیاز ثبات** | هر آی‌پی را چندین بار تست می‌کند تا اتصالات ناپایدار شناسایی شوند |
 
 ---
 
-### اسکریپت‌ها
+### تب‌های `index.html`
 
-#### ۱. `scripts/akamai_finder.sh` — جستجوگر سریع آی‌پی‌های Akamai
-بیش از ۲۰ دامنه مشهور روی Akamai را resolve کرده و آی‌پی‌ها را از **دستگاه خودتان** تست می‌کند.
+| تب | کارکرد |
+|----|--------|
+| 🔍 **اسکنر** | اسکنر اصلی — انتخاب CDN، رنج‌های IP، تنظیمات، جدول نتایج |
+| 📊 **داشبورد** | نمودار تأخیر + نوارهای سلامت CDN بعد از اسکن |
+| 🕐 **تاریخچه** | تاریخچه اسکن‌ها + پیشنهاد آی‌پی‌های پایدار |
+| 📱 **راهنما** | راهنمای گام‌به‌گام استفاده از نتایج در شیروخورشید |
+| ℹ️ **درباره** | توضیح نحوه کار CDN Fronting |
 
-- ✅ سریع (~۲ دقیقه)
-- ✅ مناسب برای یک لیست اولیه سریع
-- ❌ از داخل ایران تأیید نمی‌کند
+---
+
+### SNI Hostname‌های موجود در `index.html`
+
+| CDN | گزینه‌های SNI |
+|-----|--------------|
+| ⚡ Akamai | `a248.e.akamai.net` · `a77.net.akamai.net` · `ds-aksb.akamaized.net` |
+| 🔵 Google | `fonts.googleapis.com` · `ajax.googleapis.com` · `storage.googleapis.com` |
+| 🟠 Amazon | `d1.cloudfront.net` · `d2.cloudfront.net` · `aws.cloudfront.net` |
+| 🔷 Azure | `ajax.aspnetcdn.com` · `az416426.vo.msecnd.net` · `cdn.office.net` |
+
+---
+
+## اسکریپت‌های Bash (تست سمت سرور)
+
+برای تست دقیق‌تر از طریق نودهای ایرانی، این اسکریپت‌ها را روی یک سرور لینوکس **خارج از ایران** اجرا کنید.
+
+#### `scripts/akamai_finder.sh` — جستجوگر سریع Akamai
 
 ```bash
 chmod +x scripts/akamai_finder.sh
 ./scripts/akamai_finder.sh
 ```
 
----
-
-#### ۲. `scripts/akamai_iran_checker.sh` — تستر ایرانی Akamai
-آی‌پی‌های Akamai را از **نودهای واقعی ایرانی** از طریق API سایت check-host.net تست می‌کند.
-
-- ✅ دقیق — از داخل ایران تست می‌شود
-- ✅ نشان می‌دهد کدام نودهای ایرانی به هر آی‌پی دسترسی دارند
-- ❌ کندتر (~۱۰-۱۵ دقیقه برای لیست کامل)
+#### `scripts/akamai_iran_checker.sh` — تستر ایرانی Akamai
 
 ```bash
 chmod +x scripts/akamai_iran_checker.sh
 ./scripts/akamai_iran_checker.sh
 ```
 
----
-
-#### ۳. `scripts/cdn_iran_checker.sh` — چکر کامل CDN برای ایران ⭐ توصیه‌شده
-**همه CDN‌های اصلی** را از نودهای ایرانی تست می‌کند. کامل‌ترین ابزار.
-
-- ✅ Akamai، Google، Amazon و Azure را تست می‌کند
-- ✅ ابتدا بررسی می‌کند کدام CDN‌ها در ایران دسترس‌پذیرند
-- ✅ آی‌پی‌ها را فقط از CDN‌های دسترس‌پذیر جمع‌آوری می‌کند
-- ✅ هر آی‌پی را از ۴ نود ایرانی (تهران، اصفهان، مشهد) تست می‌کند
-- ✅ زمان پاسخ هر نود ایرانی را نشان می‌دهد
-- ✅ لیست جداشده با کاما آماده برای paste کردن خروجی می‌دهد
-- ❌ برای اجرای کامل ۱۵-۳۰ دقیقه طول می‌کشد
+#### `scripts/cdn_iran_checker.sh` — چکر کامل CDN ⭐
 
 ```bash
 chmod +x scripts/cdn_iran_checker.sh
@@ -286,99 +388,62 @@ chmod +x scripts/cdn_iran_checker.sh
 
 ---
 
-### نحوه کار تست (check-host.net)
+## نحوه استفاده از نتایج در شیروخورشید
+
+۱. اسکنر وب یا اسکریپت bash را اجرا کنید
+۲. لیست آی‌پی‌های comma-separated را کپی کنید
+۳. شیروخورشید → تنظیمات → CDN Fronting
+۴. روی **CDN edge IPs** بزنید → لیست را paste کنید
+۵. روی **CDN SNI hostname** بزنید:
 
 ```
-دستگاه شما (خارج از ایران)
-      ↓ ارسال درخواست API
-check-host.net
-      ↓ ارسال تست TCP به سرورهای ایرانی
-┌──────────────────────────────────────────┐
-│ ir1.node.check-host.net  →  تهران       │
-│ ir2.node.check-host.net  →  تهران       │
-│ ir3.node.check-host.net  →  اصفهان      │
-│ ir4.node.check-host.net  →  مشهد        │
-└──────────────────────────────────────────┘
-      ↓ هر نود TCP:443 را به آی‌پی امتحان می‌کند
-      ↓ نتیجه گزارش می‌شود: زمان یا خطا
-✅ آی‌پی در ایران کار می‌کند  یا  ❌ فیلتر است
+Akamai  →  a248.e.akamai.net
+Google  →  fonts.googleapis.com
+Amazon  →  d1.cloudfront.net
+Azure   →  ajax.aspnetcdn.com
 ```
 
-> **نکته:** نودهای ایرانی check-host.net شهرها و اپراتورهای اصلی را پوشش می‌دهند ولی همه را نه. برای پوشش کامل MCI، ایرانسل و رایتل، تست اجتماعی از داخل ایران هم ارزشمند است.
+۶. Connection Protocol → **CDN Fronting** → وصل شوید! 🎉
 
 ---
 
-### نحوه استفاده از نتایج در شیروخورشید
-
-۱. اسکریپت `cdn_iran_checker.sh` را اجرا کنید و منتظر پایان بمانید
-۲. لیست آی‌پی‌های جداشده با کاما را از خروجی کپی کنید (یا از فایل `results/cdn_working_ips.txt`)
-۳. اپ **شیروخورشید** را روی گوشی اندروید باز کنید
-۴. به **تنظیمات** بروید
-۵. در بخش **CDN Fronting**:
-   - روی **CDN edge IPs** بزنید ← لیست آی‌پی‌ها را paste کنید
-   - روی **CDN SNI hostname** بزنید ← یکی را وارد کنید:
-     ```
-     a248.e.akamai.net       ← برای آی‌پی‌های Akamai
-     www.googleapis.com      ← برای آی‌پی‌های Google
-     ajax.aspnetcdn.com      ← برای آی‌پی‌های Azure
-     ```
-۶. **Connection Protocol** را روی **CDN Fronting** بگذارید
-۷. وصل شوید!
-
----
-
-### پیش‌نیازها
-
-```bash
-# اوبونتو / دبیان
-sudo apt install curl dnsutils python3 -y
-
-# CentOS / RHEL / Fedora
-sudo yum install curl bind-utils python3 -y
-```
-
----
-
-### ساختار پروژه
+## ساختار پروژه
 
 ```
 cdn-ip-finder/
+├── index.html                    # ⭐ اسکنر وب — در مرورگر باز کنید
 ├── scripts/
-│   ├── akamai_finder.sh         # جستجوگر سریع آکامای (تست محلی)
-│   ├── akamai_iran_checker.sh   # تستر آکامای از طریق نودهای ایرانی
-│   └── cdn_iran_checker.sh      # چکر کامل CDN از نودهای ایرانی ⭐
-├── results/
-│   └── .gitkeep                 # آی‌پی‌های کارکرده اینجا ذخیره می‌شوند
+│   ├── akamai_finder.sh          # جستجوگر سریع Akamai
+│   ├── akamai_iran_checker.sh    # تستر از نودهای ایرانی
+│   └── cdn_iran_checker.sh       # چکر کامل CDN ⭐
 ├── docs/
-│   └── how-it-works.md          # جزئیات فنی
-├── README.md                    # این فایل
-└── LICENSE                      # GPL-3.0
+│   └── how-it-works.md           # توضیح فنی
+├── results/
+│   └── .gitkeep
+├── README.md
+└── LICENSE
 ```
 
 ---
 
-### مشارکت
+## مشارکت
 
-اگر از داخل ایران روی اپراتورهای مختلف آی‌پی‌ها را تست کرده‌اید، یک Issue باز کنید و اشتراک بگذارید:
+اگر از داخل ایران آی‌پی‌ها را تست کرده‌اید، یک Issue باز کنید:
 
-- روی کدام **اپراتور** تست کردید (MCI / ایرانسل / رایتل / شاتل / ...)
-- کدام **آی‌پی‌ها** کار کردند و کدام‌ها نه
-- **تاریخ** تست (آی‌پی‌ها مرتباً تغییر می‌کنند!)
-- **شهر** شما (فیلترینگ ممکن است بر حسب منطقه فرق داشته باشد)
-
-داده‌های اجتماعی از کاربران واقعی ایرانی ارزشمندترین مشارکت است!
+- کدام **اپراتور** (همراه اول / ایرانسل / رایتل / شاتل / دیگران)
+- کدام **آی‌پی‌ها** کار کردند
+- **تاریخ** تست
+- **شهر** شما
 
 ---
 
-### پروژه‌های مرتبط
+## پروژه‌های مرتبط
 
 - [شیروخورشید اندروید](https://github.com/shirokhorshid/shirokhorshid-android)
 - [سایفون](https://psiphon.ca)
-- [گزارش‌های OONI برای ایران](https://ooni.org/countries/ir)
-- [بحث‌های ایران در net4people/bbs](https://github.com/net4people/bbs)
 
 ---
 
-### لایسنس
+## لایسنس
 
 GPL-3.0 — مثل شیروخورشید و سایفون
