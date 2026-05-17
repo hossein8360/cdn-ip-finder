@@ -188,8 +188,6 @@ Community data from real Iranian users is the most valuable contribution!
 
 - [ShirOKhorshid Android](https://github.com/shirokhorshid/shirokhorshid-android)
 - [Psiphon](https://psiphon.ca)
-- [OONI Iran Reports](https://ooni.org/countries/ir)
-- [net4people/bbs Iran discussions](https://github.com/net4people/bbs)
 
 ---
 
